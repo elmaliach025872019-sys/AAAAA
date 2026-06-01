@@ -1,20 +1,71 @@
-plugins {
-    id 'com.android.application'
-}
+name: Build Android APK Pure Java
 
-android {
-    compileSdk 34
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
 
-    defaultConfig {
-        applicationId "com.example.myandroidapp"
-        minSdk 21
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
-    }
-}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-dependencies {
-    // ספריית העיצוב הרשמית והבסיסית של אנדרואיד
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-}
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Install Android SDK Components
+      run: |
+        sudo apt-get update
+        # הורדת כלי הבנייה הרשמיים ישירות לשרת
+        mkdir -p android-sdk/cmdline-tools
+        cd android-sdk/cmdline-tools
+        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+        unzip commandlinetools-linux-11076708_latest.zip
+        mv cmdline-tools latest
+        cd ../..
+        export ANDROID_HOME=$PWD/android-sdk
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+        yes | sdkmanager --licenses
+        sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+    - name: Create Structure and Compile
+      run: |
+        export ANDROID_HOME=$PWD/android-sdk
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+        
+        # בניית מבנה התיקיות שאנדרואיד חייב באופן אוטומטי בשרת
+        mkdir -p src/com/example/myandroidapp
+        mkdir -p res/layout
+        mkdir -p obj
+        mkdir -p bin
+        
+        # העברת הקבצים שלך למקום הנכון בשרת
+        cp MainActivity.java src/com/example/myandroidapp/
+        cp AndroidManifest.xml .
+        
+        # 1. יצירת קובץ ה-R (משאבי המערכת)
+        $ANDROID_HOME/build-tools/34.0.0/aapt package -f -m -J src -M AndroidManifest.xml -I $ANDROID_HOME/platforms/android-34/android.jar
+        
+        # 2. קומפילציה של קוד ה-Java ל-Bytecode
+        javac -d obj -classpath $ANDROID_HOME/platforms/android-34/android.jar src/com/example/myandroidapp/*.java
+        
+        # 3. הפיכת הקוד לקובץ דקס (DEX) של אנדרואיד
+        $ANDROID_HOME/build-tools/34.0.0/d8 --output bin/classes.dex obj/com/example/myandroidapp/*.class --lib $ANDROID_HOME/platforms/android-34/android.jar
+        
+        # 4. אריזה ראשונית ל-APK
+        $ANDROID_HOME/build-tools/34.0.0/aapt package -f -M AndroidManifest.xml -I $ANDROID_HOME/platforms/android-34/android.jar -F bin/unaligned.apk bin
+        
+        # 5. חתימה עצמית על האפליקציה כדי שתוכל להתקין אותה בטלפון
+        keytool -genkey -v -keystore my.keystore -alias mykey -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=MyName"
+        $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks my.keystore --ks-pass pass:123456 --out bin/JackieCustomApp.apk bin/unaligned.apk
+
+    - name: Upload Final APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: JackieCustomAPK
+        path: bin/JackieCustomApp.apk
