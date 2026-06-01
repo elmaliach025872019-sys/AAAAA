@@ -1,0 +1,20 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.example.myandroidapp"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+}
+
+dependencies {
+    // ספריית העיצוב הרשמית והבסיסית של אנדרואיד
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+}
