@@ -25,23 +25,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // יצירת ממשק דינמי
+        // עיצוב ממשק המשתמש (UI)
         rootLayout = new LinearLayout(this);
         rootLayout.setOrientation(LinearLayout.VERTICAL);
-        rootLayout.setPadding(40, 40, 40, 40);
+        rootLayout.setPadding(50, 50, 50, 50);
         rootLayout.setGravity(android.view.Gravity.CENTER);
-        rootLayout.setBackgroundColor(0xFF121212); // רקע כהה בסיסי
+        rootLayout.setBackgroundColor(0xFF121212); // רקע כהה
 
         statusTextView = new TextView(this);
         statusTextView.setText("העבר יד מעל החיישן לשינוי צבעים");
         statusTextView.setTextColor(Color.WHITE);
-        statusTextView.setTextSize(22);
+        statusTextView.setTextSize(24);
         statusTextView.setGravity(android.view.Gravity.CENTER);
         rootLayout.addView(statusTextView);
 
         setContentView(rootLayout);
 
-        // אתחול חיישן הקרבה
+        // הפעלת החיישנים
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         if (sensorManager != null) {
             proximity = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
@@ -68,24 +68,25 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
             if (event.values[0] < event.sensor.getMaximumRange()) {
-                // מצב קרוב: משנים את צבע הרקע ואת שורת הסטטוס לצבע מגניב (למשל סגול עמוק)
-                updateSystemColors(0xFF6200EE, "מצב חיישן פעיל!");
+                // שינוי סטטוס בר ורקע לצבע אדום/בורדו עמוק במצב פעיל
+                updateSystemColors(0xFFD32F2F, "המערכת זיהתה תנועה!", Color.WHITE);
             } else {
-                // מצב רגיל: מחזירים לצבע כהה בסיסי
-                updateSystemColors(0xFF121212, "העבר יד מעל החיישן לשינוי צבעים");
+                // חזרה למצב כהה רגיל
+                updateSystemColors(0xFF121212, "העבר יד מעל החיישן לשינוי צבעים", Color.WHITE);
             }
         }
     }
 
-    // פונקציה לשינוי צבע שורת הסטטוס של המכשיר בזמן אמת
-    private void updateSystemColors(int color, String text) {
-        rootLayout.setBackgroundColor(color);
+    private void updateSystemColors(int backgroundColor, String text, int textColor) {
+        rootLayout.setBackgroundColor(backgroundColor);
         statusTextView.setText(text);
+        statusTextView.setTextColor(textColor);
 
+        // פקודת שינוי צבע שורת הסטטוס העליונה של אנדרואיד
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             Window window = getWindow();
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            window.setStatusBarColor(color);
+            window.setStatusBarColor(backgroundColor);
         }
     }
 
